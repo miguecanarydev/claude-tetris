@@ -92,6 +92,16 @@ jobs:
                  `gh api -X PATCH repos/${{ github.repository }}/issues/comments/<ID> -f body="..."`.
                - Si no existe, créalo con `gh issue comment ${{ github.event.issue.number }} --body "..."`.
 
+            FORMATO: todo lo que escribas en el comentario (y en cualquier texto que
+            publiques en la issue) debe estar en Markdown compatible con GitHub
+            (GFM): encabezados con `#`, listas con `-` o `1.`, código en línea con
+            comillas invertidas, bloques de código con triple acento grave y
+            lenguaje (```js), negritas con `**`, listas de tareas con `- [ ]` y
+            referencias a issues con `#número`. No uses HTML salvo la marca
+            `<!-- claude-issue-triage -->`. Al pasar el texto a `--body` o a
+            `-f body=`, conserva los saltos de línea reales y escapa correctamente
+            las comillas y los acentos graves para que el Markdown no se rompa.
+
             No modifiques archivos del repositorio, no cierres la issue ni cambies
             su título o cuerpo. Solo etiquetas y el comentario de diagnóstico.
           claude_args: |
