@@ -16,7 +16,22 @@ body {
 }
 
 .wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.game-area {
   position: relative;
+}
+
+.game-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  text-indent: 8px;
+  color: #7aa2f7;
 }
 
 .game-container {
