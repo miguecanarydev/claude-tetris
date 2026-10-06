@@ -260,6 +260,9 @@ function loop(ts) {
     }
   }
   draw();
+  // endGame() puede haberse llamado desde lockPiece() dentro de este mismo
+  // fotograma; no reprogramar el bucle o seguiría apilando piezas.
+  if (gameOver) return;
   animId = requestAnimationFrame(loop);
 }
 
