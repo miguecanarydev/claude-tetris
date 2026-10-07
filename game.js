@@ -42,6 +42,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
 
 let gridColor = '#22222e';
 let blockEdge = 'transparent';
@@ -164,21 +165,14 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
+  const skin = SKINS[currentSkin];
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.strokeStyle = blockEdge;
-  context.lineWidth = 1;
-  context.strokeRect(x * size + 1.5, y * size + 1.5, size - 3, size - 3);
+  skin.drawBlock(context, x * size, y * size, size, skin.colors[colorIndex]);
   context.globalAlpha = 1;
 }
 
 function drawGrid() {
-  ctx.strokeStyle = gridColor;
+  ctx.strokeStyle = SKINS[currentSkin].gridColor || gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -287,6 +281,7 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  if (e.target === skinSelect) return;
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -334,5 +329,133 @@ themeToggle.addEventListener('click', () => {
 let savedTheme = null;
 try { savedTheme = localStorage.getItem('theme'); } catch (e) {}
 applyTheme(savedTheme === 'light' ? 'light' : 'dark');
+
+// ---- Skins ----
+// Regla de interacción con el tema claro/oscuro: Retro, Pastel y Pixel art
+// respetan el tema (fondo del canvas vía CSS, gridColor y blockEdge leídos en
+// applyTheme). Neon ignora el tema y siempre usa un canvas negro con su propia
+// rejilla. `boardBg`/`gridColor` en null = "seguir al tema". applyTheme no toca
+// el fondo inline del canvas, así que cambiar de tema no rompe el de la skin.
+function roundedRectPath(context, x, y, w, h, r) {
+  context.beginPath();
+  if (context.roundRect) {
+    context.roundRect(x, y, w, h, r);
+  } else {
+    context.moveTo(x + r, y);
+    context.arcTo(x + w, y, x + w, y + h, r);
+    context.arcTo(x + w, y + h, x, y + h, r);
+    context.arcTo(x, y + h, x, y, r);
+    context.arcTo(x, y, x + w, y, r);
+    context.closePath();
+  }
+}
+
+// Textura 4x4: 1 = píxel claro, 2 = píxel oscuro, 0 = color base
+const PIXEL_TEXTURE = [
+  [1, 1, 0, 0],
+  [1, 0, 0, 2],
+  [0, 0, 2, 2],
+  [0, 2, 2, 2],
+];
+
+const SKINS = {
+  retro: {
+    name: 'Retro',
+    colors: COLORS,
+    boardBg: null,
+    gridColor: null,
+    drawBlock(context, px, py, size, color) {
+      context.fillStyle = color;
+      context.fillRect(px + 1, py + 1, size - 2, size - 2);
+      context.fillStyle = 'rgba(255,255,255,0.12)';
+      context.fillRect(px + 1, py + 1, size - 2, 4);
+      context.strokeStyle = blockEdge;
+      context.lineWidth = 1;
+      context.strokeRect(px + 1.5, py + 1.5, size - 3, size - 3);
+    },
+  },
+  neon: {
+    name: 'Neon',
+    colors: [null, '#00f0ff', '#ffee00', '#d500f9', '#39ff14', '#ff1744', '#2979ff', '#ff9100', '#e0e0e0'],
+    boardBg: '#000',
+    gridColor: '#15151f',
+    drawBlock(context, px, py, size, color) {
+      context.shadowColor = color;
+      context.shadowBlur = 12;
+      context.fillStyle = color;
+      context.fillRect(px + 3, py + 3, size - 6, size - 6);
+      context.shadowBlur = 0;
+      context.shadowColor = 'transparent';
+      context.fillStyle = 'rgba(255,255,255,0.35)';
+      context.fillRect(px + 5, py + 5, size - 10, size - 10);
+    },
+  },
+  pastel: {
+    name: 'Pastel',
+    colors: [null, '#a8e6ef', '#fff3b0', '#d7b8f3', '#b9eac1', '#f7b7b7', '#b5d3f7', '#ffd6a5', '#cfd8dc'],
+    boardBg: null,
+    gridColor: null,
+    drawBlock(context, px, py, size, color) {
+      const r = size * 0.28;
+      roundedRectPath(context, px + 1.5, py + 1.5, size - 3, size - 3, r);
+      context.fillStyle = color;
+      context.fill();
+      context.strokeStyle = blockEdge === 'transparent' ? 'rgba(255,255,255,0.5)' : blockEdge;
+      context.lineWidth = 1;
+      context.stroke();
+      roundedRectPath(context, px + 5, py + 4, size - 10, 4, 2);
+      context.fillStyle = 'rgba(255,255,255,0.45)';
+      context.fill();
+    },
+  },
+  pixel: {
+    name: 'Pixel art',
+    colors: [null, '#29b6f6', '#fdd835', '#8e24aa', '#43a047', '#e53935', '#3949ab', '#fb8c00', '#78909c'],
+    boardBg: null,
+    gridColor: null,
+    drawBlock(context, px, py, size, color) {
+      const n = PIXEL_TEXTURE.length;
+      const inner = size - 2;
+      const cell = inner / n;
+      context.fillStyle = color;
+      context.fillRect(px + 1, py + 1, inner, inner);
+      for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+          const t = PIXEL_TEXTURE[r][c];
+          if (!t) continue;
+          context.fillStyle = t === 1 ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)';
+          context.fillRect(px + 1 + c * cell, py + 1 + r * cell, cell, cell);
+        }
+      }
+      context.strokeStyle = 'rgba(0,0,0,0.6)';
+      context.lineWidth = 1;
+      context.strokeRect(px + 1.5, py + 1.5, inner - 1, inner - 1);
+    },
+  },
+};
+
+let currentSkin = 'retro';
+
+function applySkin(name) {
+  if (!SKINS[name]) name = 'retro';
+  currentSkin = name;
+  skinSelect.value = name;
+  try { localStorage.setItem('skin', name); } catch (e) {}
+  const bg = SKINS[name].boardBg || '';
+  canvas.style.background = bg;
+  nextCanvas.style.background = bg;
+  // Redibujar sin tocar animId (el bucle está cancelado en pausa/game over)
+  if (current && next) { draw(); drawNext(); }
+}
+
+skinSelect.addEventListener('change', () => {
+  applySkin(skinSelect.value);
+  skinSelect.blur();
+});
+
+let savedSkin = null;
+try { savedSkin = localStorage.getItem('skin'); } catch (e) {}
+applySkin(savedSkin);
+// ---- Fin Skins ----
 
 init();
