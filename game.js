@@ -53,6 +53,7 @@ let gridColor = '#22222e';
 let blockEdge = 'transparent';
 
 let startLevel = 1;
+let gameStartLevel = 1;
 let ignoreRepeat = false;
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -120,7 +121,7 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.max(startLevel, Math.floor(lines / 10) + 1);
+    level = Math.max(gameStartLevel, Math.floor(lines / 10) + 1);
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
   }
@@ -284,7 +285,8 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = startLevel;
+  gameStartLevel = startLevel;
+  level = gameStartLevel;
   paused = false;
   gameOver = false;
   dropInterval = Math.max(100, 1000 - (level - 1) * 90);
@@ -295,6 +297,7 @@ function init() {
   updateHUD();
   overlay.classList.add('hidden');
   pauseMenu.classList.add('hidden');
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
